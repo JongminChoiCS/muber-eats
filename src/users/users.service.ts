@@ -135,7 +135,7 @@ export class UserService {
       }
       return { success: false, error: 'Verification not found.' };
     } catch (error) {
-      return { success: false };
+      return { success: false, error: 'Could not verify email.' };
     }
   }
 }
