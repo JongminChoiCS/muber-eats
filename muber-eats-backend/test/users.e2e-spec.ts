@@ -4,6 +4,11 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
+const testUser = {
+  EMAIL: 'joey@test.com',
+  PASSWORD: 'test.password',
+};
+
 jest.mock('got', () => {
   return {
     post: jest.fn(),
@@ -14,6 +19,7 @@ const GRAPHQL_ENDPOINT = '/graphql';
 
 describe('UserModule (e2e)', () => {
   let app: INestApplication;
+  let jwtToken: string;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,7 +54,6 @@ describe('UserModule (e2e)', () => {
   });
 
   describe('createAccount', () => {
-    const EMAIL = 'joey@test.com';
     it('should create account', () => {
       return request(app.getHttpServer())
         .post(GRAPHQL_ENDPOINT)
@@ -56,8 +61,8 @@ describe('UserModule (e2e)', () => {
           query: `
           mutation {
             createAccount(input: {
-              email:"${EMAIL}",
-              password:"test.password",
+              email:"${testUser.EMAIL}",
+              password:"${testUser.PASSWORD}",
               role:Owner
             }) {
               success
@@ -68,8 +73,13 @@ describe('UserModule (e2e)', () => {
         })
         .expect(200)
         .expect((res) => {
-          expect(res.body.data.createAccount.success).toBe(true);
-          expect(res.body.data.createAccount.error).toBe(null);
+          const {
+            body: {
+              data: { createAccount },
+            },
+          } = res;
+          expect(createAccount.success).toBe(true);
+          expect(createAccount.error).toBe(null);
         });
     });
 
@@ -80,8 +90,8 @@ describe('UserModule (e2e)', () => {
           query: `
           mutation {
             createAccount(input: {
-              email:"${EMAIL}",
-              password:"test.password",
+              email:"${testUser.EMAIL}",
+              password:"${testUser.PASSWORD}",
               role:Owner
             }) {
               success
@@ -92,16 +102,81 @@ describe('UserModule (e2e)', () => {
         })
         .expect(200)
         .expect((res) => {
-          expect(res.body.data.createAccount.success).toBe(false);
-          expect(res.body.data.createAccount.error).toBe(
+          const {
+            body: {
+              data: { createAccount },
+            },
+          } = res;
+          expect(createAccount.success).toBe(false);
+          expect(createAccount.error).toBe(
             'There is a user with that email already',
           );
         });
     });
   });
 
+  describe('login', () => {
+    it('should login with correct credentials', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `
+        mutation {
+          login(input:{
+            email:"${testUser.EMAIL}",
+            password:"${testUser.PASSWORD}",
+          }) {
+            success
+            error
+            token
+          }
+        }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          expect(login.success).toBe(true);
+          expect(login.error).toBe(null);
+          expect(login.token).toEqual(expect.any(String));
+          jwtToken = login.token;
+        });
+    });
+
+    it('should not be able to login with wrong credentials', () => {
+      return request(app.getHttpServer())
+        .post(GRAPHQL_ENDPOINT)
+        .send({
+          query: `
+      mutation {
+        login(input:{
+          email:"${testUser.EMAIL}",
+          password:"wrongPassword",
+        }) {
+          success
+          error
+          token
+        }
+      }`,
+        })
+        .expect(200)
+        .expect((res) => {
+          const {
+            body: {
+              data: { login },
+            },
+          } = res;
+          expect(login.success).toBe(false);
+          expect(login.error).toBe('Wrong password');
+          expect(login.token).toBe(null);
+        });
+    });
+  });
+
   it.todo('userProfile');
-  it.todo('login');
   it.todo('me');
   it.todo('verifyEmail');
   it.todo('editProfile');
