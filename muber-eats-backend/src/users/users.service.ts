@@ -100,10 +100,22 @@ export class UserService {
     { email, password }: EditProfileInput,
   ): Promise<EditProfileOutput> {
     try {
+      const checkEmailExist: number = await this.users.count({
+        where: { email },
+      });
+
+      if (checkEmailExist !== 0) {
+        return {
+          success: false,
+          error: 'Email Already Taken',
+        };
+      }
+
       const user = await this.users.findOne({ where: { id: userId } });
       if (email) {
         user.email = email;
         user.verified = false;
+        await this.verifications.delete({ user: { id: user.id } });
         const verification = await this.verifications.save(
           this.verifications.create({ user }),
         );
