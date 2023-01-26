@@ -9,10 +9,12 @@ import {
   CreateRestaurantInput,
   CreateRestaurantOutput,
 } from './dtos/create-restaurant.dto';
+import { DeleteDishInput, DeleteDishOutput } from './dtos/delete-dish.dto';
 import {
   DeleteRestaurantInput,
   DeleteRestaurantOutput,
 } from './dtos/delete-restaurant.dto';
+import { EditDishInput, EditDishOutput } from './dtos/edit-dish.dto';
 import {
   EditRestaurantInput,
   EditRestaurantOutput,
@@ -204,7 +206,7 @@ export class RestaurantService {
         category,
         totalPages: Math.ceil(totalResults / 25),
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'Could not find category',
@@ -309,10 +311,82 @@ export class RestaurantService {
       return {
         success: true,
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'Could not create dish',
+      };
+    }
+  }
+
+  async editDish(
+    owner: User,
+    editDishInput: EditDishInput,
+  ): Promise<EditDishOutput> {
+    try {
+      const dish = await this.dishes.findOne({
+        where: { id: editDishInput.dishId },
+        relations: ['restaurant'],
+      });
+      if (!dish) {
+        return {
+          success: false,
+          error: 'Dish not found',
+        };
+      }
+      if (dish.restaurant.ownerId !== owner.id) {
+        return {
+          success: false,
+          error: "You can't do that.",
+        };
+      }
+      await this.dishes.save([
+        {
+          id: editDishInput.dishId,
+          ...editDishInput,
+        },
+      ]);
+      return {
+        success: true,
+      };
+    } catch {
+      return {
+        success: false,
+        error: 'Could not edit dish',
+      };
+    }
+  }
+
+  async deleteDish(
+    owner: User,
+    { dishId }: DeleteDishInput,
+  ): Promise<DeleteDishOutput> {
+    try {
+      const dish = await this.dishes.findOne({
+        where: { id: dishId },
+        relations: ['restaurant'],
+      });
+      if (!dish) {
+        return {
+          success: false,
+          error: 'Dish not found',
+        };
+      }
+      if (dish.restaurant.ownerId !== owner.id) {
+        return {
+          success: false,
+          error: "You can't do that.",
+        };
+      }
+
+      await this.dishes.delete(dishId);
+      return {
+        success: true,
+      };
+    } catch {
+      return {
+        success: false,
+        error: 'Could not delete dish',
       };
     }
   }
