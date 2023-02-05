@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Args } from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AuthUser } from 'src/auth/auth-user.decorator';
 import { Dish } from 'src/restaurants/entities/dish.entity';
 import { Restaurant } from 'src/restaurants/entities/restaurant.entity';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Repository } from 'typeorm';
 import { CraeteOrderInput, CreateOrderOuput } from './dtos/create-order.dto';
+import { GetOrderInput, GetOrderOutput } from './dtos/get-order.dto';
 import { GetOrdersInput, GetOrdersOutput } from './dtos/get-orders.dto';
 import { OrderItem } from './entities/order-item.entity';
 import { Orders } from './entities/order.entity';
@@ -136,6 +139,52 @@ export class OrderService {
       return {
         success: false,
         error: 'Could not get orders',
+      };
+    }
+  }
+
+  async getOrder(
+    @AuthUser() user: User,
+    @Args('input') { id: orderId }: GetOrderInput,
+  ): Promise<GetOrderOutput> {
+    try {
+      const order = await this.orders.findOne({
+        where: { id: orderId },
+        relations: ['restaurant'],
+      });
+      if (!order) {
+        return {
+          success: false,
+          error: 'Order not found.',
+        };
+      }
+      let canSee = true;
+      if (user.role === UserRole.Client && order.customerId !== user.id) {
+        canSee = false;
+      }
+      if (user.role === UserRole.Delivery && order.driverId !== user.id) {
+        canSee = false;
+      }
+      if (
+        user.role === UserRole.Owner &&
+        order.restaurant.ownerId !== user.id
+      ) {
+        canSee = false;
+      }
+      if (!canSee) {
+        return {
+          success: false,
+          error: 'You cant see that',
+        };
+      }
+      return {
+        success: true,
+        order,
+      };
+    } catch {
+      return {
+        success: false,
+        error: 'Could not get order.',
       };
     }
   }
