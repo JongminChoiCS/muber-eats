@@ -23,6 +23,7 @@ import { Dish } from './restaurants/entities/dish.entity';
 import { OrdersModule } from './orders/orders.module';
 import { Orders } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
+import { CommonModule } from './common/common.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -62,11 +63,32 @@ import { OrderItem } from './orders/entities/order-item.entity';
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRoot({
+      subscriptions: {
+        'subscriptions-transport-ws': {
+          onConnect: (connectionParams) => {
+            console.log('connectionParams', connectionParams);
+            const authToken = connectionParams['X-JWT'];
+
+            if (!authToken) throw new Error('Token is not valid');
+
+            const token = authToken;
+
+            return { token };
+          },
+        },
+      },
       driver: ApolloDriver,
       autoSchemaFile: true,
-      context: ({ req }) => ({ user: req['user'] }),
+      context: ({ req, connection }) => {
+        if (req) {
+          return { token: req.headers['x-jwt'] };
+        } else {
+          return { token: connection.context['X-JWT'] };
+        }
+      },
     }),
+
     JwtModule.forRoot({
       privateKey: process.env.PRIVATE_KEY,
     }),
@@ -79,14 +101,9 @@ import { OrderItem } from './orders/entities/order-item.entity';
     UsersModule,
     RestaurantsModule,
     OrdersModule,
+    CommonModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(JwtMiddleware)
-      .forRoutes({ path: '/graphql', method: RequestMethod.POST });
-  }
-}
+export class AppModule {}
