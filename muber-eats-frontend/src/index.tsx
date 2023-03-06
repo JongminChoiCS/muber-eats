@@ -2,6 +2,7 @@ import React from "react";
 import * as ReactDOMClient from "react-dom/client";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
+import "./styles/styles.css";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Failed to find the root element");
