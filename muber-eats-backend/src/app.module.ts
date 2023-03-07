@@ -24,6 +24,8 @@ import { OrdersModule } from './orders/orders.module';
 import { Orders } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
 import { CommonModule } from './common/common.module';
+import { PaymentsModule } from './payment/payment.module';
+import { Payment } from './payment/entities/payment.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -59,6 +61,7 @@ import { CommonModule } from './common/common.module';
         Dish,
         Orders,
         OrderItem,
+        Payment,
       ],
       logging:
         process.env.NODE_ENV !== 'prod' && process.env.NODE_ENV !== 'test',
@@ -102,6 +105,7 @@ import { CommonModule } from './common/common.module';
     RestaurantsModule,
     OrdersModule,
     CommonModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],
